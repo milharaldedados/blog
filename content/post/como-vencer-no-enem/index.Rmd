@@ -118,6 +118,10 @@ e <- e[e$TP_PRESENCA_LC == 1, ]
 e <- e[e$TP_PRESENCA_MT == 1, ]
 ```
 
+```{r}
+e$CO_ESCOLA = as.factor(e$CO_ESCOLA)
+```
+
 Vamos salvar nosso banco limpo:
 
 ```{r}
@@ -165,6 +169,33 @@ g = ggplot(data = e, aes(Q006)) +
 ggplotly(g)
 ```
 
+## Quais as disciplinas são mais "difíceis"?
+
+```{r}
+library(ggplot2)
+gg <- ggplot(e) +
+  geom_histogram(aes(NU_NOTA_CN), bins = 30, fill = "red", alpha = .5) +
+  geom_histogram(aes(NU_NOTA_CH), bins = 30, fill = "blue", alpha = .5) +
+  geom_histogram(aes(NU_NOTA_LC), bins = 30, fill = "cyan", alpha = .5) +
+  geom_histogram(aes(NU_NOTA_MT), bins = 30, fill = "orange", alpha = .5) +
+  geom_histogram(aes(NU_NOTA_REDACAO), bins = 30, fill = "turquoise", alpha = .5) +
+  scale_fill_discrete(1:5)
+gg
+```
+Como as distribuições de matemática e ciências da natureza se encontra mais à esquerda. Para vencer no ENEM, pouca diferença nestas notas, significa estar à frente de mais pessoas.
+
+```{r}
+library(ggplot2)
+gg <- ggplot(mulheres) +
+  geom_histogram(aes(NU_NOTA_CN), bins = 30, fill = "red", alpha = .5) +
+  geom_histogram(aes(NU_NOTA_CH), bins = 30, fill = "blue", alpha = .5) +
+  geom_histogram(aes(NU_NOTA_LC), bins = 30, fill = "cyan", alpha = .5) +
+  geom_histogram(aes(NU_NOTA_MT), bins = 30, fill = "orange", alpha = .5) +
+  geom_histogram(aes(NU_NOTA_REDACAO), bins = 30, fill = "turquoise", alpha = .5) +
+  scale_fill_discrete(1:5)
+gg
+```
+
 ## Mulheres Casadas
 
 Nossa hipótese é de que mulheres casadas tem notas menores que mulheres não casadas. Para testar isso, vamos fazer um teste-t para saber se a média é diferente entre os dois grupos.
@@ -188,19 +219,91 @@ plot(mulheres$TP_ESTADO_CIVIL)
 
 
 ```{r}
+library(effsize)
 casadas <- mulheres[mulheres$TP_ESTADO_CIVIL == "Casado", ]
 solteiras <- mulheres[mulheres$TP_ESTADO_CIVIL == "Solteiro", ]
 ch <- t.test(casadas$NU_NOTA_CH, solteiras$NU_NOTA_CH); ch
+cohen.d(casadas$NU_NOTA_CH, solteiras$NU_NOTA_CH)
+
 cn <- t.test(casadas$NU_NOTA_CN, solteiras$NU_NOTA_CN); cn
+cohen.d(casadas$NU_NOTA_CN, solteiras$NU_NOTA_CN)
+
 mt <- t.test(casadas$NU_NOTA_MT, solteiras$NU_NOTA_MT); mt
-lc <- t.test(casadas$NU_NOTA_LC, solteiras$NU_NOTA_LC); lc
-re <- t.test(casadas$NU_NOTA_REDACAO, solteiras$NU_NOTA_REDACAO); re 
+cohen.d(casadas$NU_NOTA_MT, solteiras$NU_NOTA_MT)
+
+lc <- t.test(casadas$NU_NOTA_LC, solteiras$NU_NOTA_LC); 
+cohen.d(casadas$NU_NOTA_LC, solteiras$NU_NOTA_LC)
+
+re <- t.test(casadas$NU_NOTA_REDACAO, solteiras$NU_NOTA_REDACAO); re
+cohen.d(casadas$NU_NOTA_REDACAO, solteiras$NU_NOTA_REDACAO)
+```
+
+# Homens Casados vs. solteiros.
+
+```{r}
+homens <- e[e$TP_SEXO == "M", ]
+```
+
+```{r}
+table(homens$TP_ESTADO_CIVIL)/nrow(homens) * 100
+mean(homens$NU_IDADE); sd(homens$NU_IDADE)
+```
+
+```{r}
+hist(homens$NU_IDADE, breaks = 100)
+nrow(homens[homens$NU_IDADE > 20, ])
+nrow(homens[homens$NU_IDADE <= 20, ])
+plot(homens$TP_ESTADO_CIVIL)
+```
+
+```{r}
+library(effsize)
+casados <- homens[homens$TP_ESTADO_CIVIL == "Casado", ]
+solteiros <- homens[homens$TP_ESTADO_CIVIL == "Solteiro", ]
+
+ch <- t.test(casados$NU_NOTA_CH, solteiros$NU_NOTA_CH); ch
+cohen.d(casados$NU_NOTA_CH, solteiros$NU_NOTA_CH)
+
+cn <- t.test(casados$NU_NOTA_CN, solteiros$NU_NOTA_CN); cn
+cohen.d(casados$NU_NOTA_CN, solteiros$NU_NOTA_CN)
+
+mt <- t.test(casados$NU_NOTA_MT, solteiros$NU_NOTA_MT); mt
+cohen.d(casados$NU_NOTA_MT, solteiros$NU_NOTA_MT)
+
+lc <- t.test(casados$NU_NOTA_LC, solteiros$NU_NOTA_LC); 
+cohen.d(casados$NU_NOTA_LC, solteiros$NU_NOTA_LC)
+
+re <- t.test(casados$NU_NOTA_REDACAO, solteiros$NU_NOTA_REDACAO); re
+cohen.d(casados$NU_NOTA_REDACAO, solteiros$NU_NOTA_REDACAO)
+```
+
+# Começando nosso cálculo de Como Vencer o ENEM?
+
+```{r regressao}
+library(lme4)
+fit <- lmer(data = e, NU_NOTA_MT ~ Q006 +  (1|CO_ESCOLA))
+summary(fit)
 ```
 
 
 # Como vencer no ENEM?
 
-O primeiro para vencer no ENEM, caso você seja uma mulher, é ser solteira. Evite ser cada ao fazer o ENEM.
+## Ser solteira vs. Ser casada
+
+- O primeiro para vencer no ENEM, caso você seja uma mulher, é ser solteira. Evite ser cada ao fazer o ENEM.
+
+- Neste ano (2019) as mulheres solteiras tiveram mais diferença em Matemática (d cohen = 0,35) e linguagens e códigos (d = 0,25). Então, para vencer no ENEM, mulheres solteiras tem mais vantagem nestas notas.
+
+## Solteiro vs. Casados
+
+Em um mundo equânime, o dito acima tem de se repetir.
+
+Se você é homem, apesar de haver uma ligeira diferença que favorece os solteiros, esta diferença é muito pequena. Então, se você quiser vencer no ENEM sendo homem, você pode escolher se casado ou solteiro.
+
+## Renda
+
+- Se você quiser vencer no ENEM, seja o mais rico possível. Qualquer aumento na sua renda, aumenta sua nota no ENEM (matemática).
+
 
 # Limitações
 
